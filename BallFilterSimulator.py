@@ -105,7 +105,7 @@ FPS = 20
 USE_PARTICLE_FILTER = False
 USE_MATHEW_CUSTOM_FILTER = False
 USE_MATHEW_PARTICLE_FILTER = True
-TRUNCATE_INITIAL_DATA = True
+TRUNCATE_INITIAL_DATA = False
 
 # The ball objects that are updated and plotted
 old_filter_ball = Ball(0, 0)
@@ -150,12 +150,12 @@ with open(path_to_logfiles + LOGFILE, 'r') as tsv:
             balldata = BallData(float(row[XPOS_COLUMN]), float(row[YPOS_COLUMN]), float(row[CONFIDENCE_COLUMN]))
             all_balls.append(balldata)
 
-            pFilter.add(balldata.position()) # accepts Points
-            mathewCustomFilter.add(balldata) # accepts ballData
-            mathewParticleFilter.add(balldata) # accepts ballData
+            pFilter.add(balldata.position())  # accepts Points
+            mathewCustomFilter.add(balldata)  # accepts ballData
+            mathewParticleFilter.add(balldata)  # accepts ballData
         elif row[LABEL_COLUMN] == 'Tick':
             if TRUNCATE_INITIAL_DATA is True and first_tick is False:
-                del all_balls[:-1] # remove all but the last elements
+                del all_balls[:-1]  # remove all but the last elements
                 first_tick = True
                 print(all_balls)
 
@@ -184,7 +184,6 @@ with open(path_to_logfiles + LOGFILE, 'r') as tsv:
                 mathewParticleFilter.update()
                 mathew_particle_ball.update_position(mathewParticleFilter.getEstimate(), best_time)
                 mathew_particle_ball_data.append(mathew_particle_ball.copy())
-
 
             # save the values to plot later
             all_balls_data.append(all_balls.copy())
@@ -260,8 +259,24 @@ with open(path_to_logfiles + LOGFILE, 'r') as tsv:
 
 # The animation and plotting
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+def custom_div_cmap(numcolors=100, name='custom_cmap', mincol='blue', maxcol='orange'):
+    """ Create a custom colormap with three colors
+
+    Default is blue to white to red with 11 colors.  Colors can be specified
+    in any way understandable by matplotlib.colors.ColorConverter.to_rgb()
+    """
+
+    from matplotlib.colors import LinearSegmentedColormap
+
+    cmap = LinearSegmentedColormap.from_list(name=name,
+                                             colors=[mincol, maxcol],
+                                             N=numcolors)
+    return cmap
+
 fig, ax = plt.subplots()
 ax.grid()
+
+# Plot the field
 field1 = plt.Rectangle((-FIELD_LENGTH / 2, -FIELD_WIDTH / 2), FIELD_LENGTH, FIELD_WIDTH, lw=2, fill=False, ec='black')
 field2 = plt.Rectangle((-FIELD_LENGTH / 2 - GOAL_DEPTH, -GOAL_WIDTH / 2), GOAL_DEPTH, GOAL_WIDTH, lw=2, fill=False,
                        ec='black')
@@ -269,14 +284,18 @@ field3 = plt.Rectangle((FIELD_LENGTH / 2, -GOAL_WIDTH / 2), GOAL_DEPTH, GOAL_WID
 field4 = plt.Rectangle((0, -FIELD_WIDTH / 2), 0, FIELD_WIDTH, lw=2, fill=False, ec='black')
 field5 = plt.Circle((0, 0), radius=CENTER_CIRCLE_RADIUS, lw=2, fill=False, ec='black')
 
-# all_balls_plot, = plt.plot([], [], 'k*', ms=3)
-all_balls_scatter = plt.scatter([], [], cmap='winter', c=[], s=10)
-old_filter_plot, = plt.plot([], [], 'co', ms=3)
-old_filter_velocity, = plt.plot([], [], 'c-', lw=0.5)
-new_ball_plot, = plt.plot([], [], 'mo', ms=3)
-new_ball_velocity, = plt.plot([], [], 'm-', lw=0.5)
-temp_all_ball_scatter_data = []
+ball_cmap = custom_div_cmap()
+all_balls_scatter = plt.scatter([], [], marker='d', cmap=ball_cmap, c=[], s=7, vmin=0.0, vmax=1.0)
+old_filter_plot, = plt.plot([], [], 'ko', ms=2, alpha=0.6)
+old_filter_velocity, = plt.plot([], [], 'k-', lw=0.4, alpha=0.6)
+particle_ball_plot, = plt.plot([], [], 'yo', ms=3)
+particle_ball_velocity, = plt.plot([], [], 'y-', lw=0.5)
+mathew_custom_plot, = plt.plot([], [], 'co', ms=3)
+mathew_custom_velocity, = plt.plot([], [], 'c-', lw=0.5)
+mathew_particle_plot, = plt.plot([], [], 'mo', ms=3)
+mathew_particle_velocity, = plt.plot([], [], 'm-', lw=0.5)
 
+# Friendly players
 friendly_1 = plt.Circle((-99, -99), radius=0.09, color="green")
 friendly_2 = plt.Circle((-99, -99), radius=0.09, color="green")
 friendly_3 = plt.Circle((-99, -99), radius=0.09, color="green")
@@ -284,6 +303,7 @@ friendly_4 = plt.Circle((-99, -99), radius=0.09, color="green")
 friendly_5 = plt.Circle((-99, -99), radius=0.09, color="green")
 friendly_6 = plt.Circle((-99, -99), radius=0.09, color="green")
 
+# enemy players
 enemy_1 = plt.Circle((-99, -99), radius=0.09, color="red")
 enemy_2 = plt.Circle((-99, -99), radius=0.09, color="red")
 enemy_3 = plt.Circle((-99, -99), radius=0.09, color="red")
@@ -301,14 +321,18 @@ def init():
     ax.add_patch(field5)
     ax.set_ylim(-FIELD_WIDTH / 2 - 0.5, FIELD_WIDTH / 2 + 0.5)
     ax.set_xlim(-FIELD_LENGTH / 2 - 0.5, FIELD_LENGTH / 2 + 0.5)
-    ax.set_aspect(FIELD_WIDTH / FIELD_LENGTH)
+    # ax.set_aspect(FIELD_WIDTH / FIELD_LENGTH)
 
     # all_balls_plot.set_data([], [])
     all_balls_scatter.set_offsets([])
     old_filter_plot.set_data([], [])
-    new_ball_plot.set_data([], [])
     old_filter_velocity.set_data([], [])
-    new_ball_velocity.set_data([], [])
+    particle_ball_plot.set_data([], [])
+    particle_ball_velocity.set_data([], [])
+    mathew_custom_plot.set_data([], [])
+    mathew_custom_velocity.set_data([], [])
+    mathew_particle_plot.set_data([], [])
+    mathew_particle_velocity.set_data([], [])
 
     ax.add_patch(friendly_1)
     ax.add_patch(friendly_2)
@@ -324,18 +348,22 @@ def init():
     ax.add_patch(enemy_5)
     ax.add_patch(enemy_6)
 
-    return field1, field2, field3, field4, field5, old_filter_plot, new_ball_plot, old_filter_velocity, new_ball_velocity, all_balls_scatter,
+    return field1, field2, field3, field4, field5, all_balls_scatter, \
+           old_filter_plot, old_filter_velocity, \
+           particle_ball_plot, particle_ball_velocity, \
+           mathew_custom_plot, mathew_custom_velocity, \
+           mathew_particle_plot, mathew_particle_velocity,
 
 
 def run(i):
     # update all_balls position in scatter plot
-    temp_all_ball_scatter_data.clear()
+    temp_all_ball_scatter_data = []
     for c in all_balls_data[i]:
         temp_all_ball_scatter_data.append((c.position().x, c.position().y))
     all_balls_scatter.set_offsets(temp_all_ball_scatter_data)
 
     # color the vision balls based on their confidence values
-    all_balls_scatter.set_array(np.array([c.confidence * 100 for c in all_balls_data[i]]))
+    all_balls_scatter.set_array(np.array([c.confidence for c in all_balls_data[i]]))
 
     # plot the old filter ball data
     old_filter_plot.set_data([old_filter_ball_data[i].position().x], [old_filter_ball_data[i].position().y])
@@ -345,12 +373,31 @@ def run(i):
         [old_filter_ball_data[i].position().y,
          old_filter_ball_data[i].position().y + old_filter_ball_data[i].velocity().y])
 
-    # Plot the new ball filter data
-    new_ball_plot.set_data([mathew_particle_ball_data[i].position().x], [mathew_particle_ball_data[i].position().y])
-    new_ball_velocity.set_data([mathew_particle_ball_data[i].position().x,
-                                mathew_particle_ball_data[i].position().x + mathew_particle_ball_data[i].velocity().x],
-                               [mathew_particle_ball_data[i].position().y,
-                                mathew_particle_ball_data[i].position().y + mathew_particle_ball_data[i].velocity().y])
+    # Plot the particle ball data
+    if USE_PARTICLE_FILTER:
+        particle_ball_plot.set_data([particle_ball_data[i].position().x], [particle_ball_data[i].position().y])
+        particle_ball_velocity.set_data([particle_ball_data[i].position().x,
+                                         particle_ball_data[i].position().x + particle_ball_data[i].velocity().x],
+                                        [particle_ball_data[i].position().y,
+                                         particle_ball_data[i].position().y + particle_ball_data[i].velocity().y])
+
+    # Plot the mathew custom filter ball data
+    if USE_MATHEW_CUSTOM_FILTER:
+        mathew_custom_plot.set_data([mathew_custom_ball_data[i].position().x],
+                                    [mathew_custom_ball_data[i].position().y])
+        mathew_custom_velocity.set_data([mathew_custom_ball_data[i].position().x,
+                                         mathew_custom_ball_data[i].position().x + mathew_custom_ball_data[i].velocity().x],
+                                        [mathew_custom_ball_data[i].position().y,
+                                         mathew_custom_ball_data[i].position().y + mathew_custom_ball_data[i].velocity().y])
+
+    # Plot the mathew particle filter ball data
+    if USE_MATHEW_PARTICLE_FILTER:
+        mathew_particle_plot.set_data([mathew_particle_ball_data[i].position().x],
+                                      [mathew_particle_ball_data[i].position().y])
+        mathew_particle_velocity.set_data([mathew_particle_ball_data[i].position().x,
+                                           mathew_particle_ball_data[i].position().x + mathew_particle_ball_data[i].velocity().x],
+                                          [mathew_particle_ball_data[i].position().y,
+                                           mathew_particle_ball_data[i].position().y + mathew_particle_ball_data[i].velocity().y])
 
     # plot friendly robots
     friendly_1.center = (friendly_1_data[i].position().x, friendly_1_data[i].position().y)
@@ -368,8 +415,14 @@ def run(i):
     enemy_5.center = (enemy_5_data[i].position().x, enemy_5_data[i].position().y)
     enemy_6.center = (enemy_6_data[i].position().x, enemy_6_data[i].position().y)
 
-    return field1, field2, field3, field4, field5, old_filter_plot, new_ball_plot, \
-           old_filter_velocity, new_ball_velocity, all_balls_scatter,
+    return field1, field2, field3, field4, field5, all_balls_scatter, \
+           old_filter_plot, old_filter_velocity, \
+           particle_ball_plot, particle_ball_velocity, \
+           mathew_custom_plot, mathew_custom_velocity, \
+           mathew_particle_plot, mathew_particle_velocity,
+
+
+
 
 
 # create animation
