@@ -1,0 +1,57 @@
+Notes about Ball filter:
+
+VISION DATA:
+- confidence seems to be value normalized between 0 - 1.0
+- not every timestamp has a ball
+- about 4-5 vision ticks/packets per ai tick
+    - ball location is "set" each ai tick
+
+
+When logging, AI must be quit GRACEFULLY (not ctrl-C) otherwise log is corrupt
+
+Old Kalman filter rough procedure:
+- check if any detected balls are inside field
+- for each detected ball, check if it's in the field. If it isn't and there are
+  balls in the field, skip that ball. Otherwise do the following
+    - get detected position, adjusting for what end we are defending
+    - 
+    
+In logs, it seems like while the ball is moving suddenly (eg. gets kicked) the time
+that AI is lagging behind the ball location vision actually doesn't detect any balls
+
+Particle Filter is much more responsive than Kalman. It's basically right on the ball.
+However it's much more unstable and flickers around a bit even sitting still with good vision.
+
+Proposition:
+Base the filter of the particle filter and tighten up conditions to try make it more stable
+- ignore all vision that could not be possible
+    - ie. ball would have had to move more than 8m/s
+    - the confidence value is below some threshold (value TBD)
+
+How the Particle filter works:
+-has confidence threshold for particles above which we consider again for resampling
+-has minimium distance the ball must travel before we treat it as "in play"
+-has max vel ball can travel
+
+1. add all detected balls (that are in the field) to the particle filter
+2. If 1 or more balls  are detected for this tick use the pFilter.getEstimate
+3. Otherwise check if a robot has the ball and use that. Otherwise do not update the ball
+    - maybe instead just assume that ball propagates based on velocity?
+
+pFilter->update() - propagate particles
+pFilter->getEstimate() - return most likely ball pos
+pFilter->add() - add data?
+PFilter is basically a glorified data-averager
+
+Ideas for new filter:
+- remove data with low confidence (almost all is really high so this just gets rid of a little bit of noise)
+- somehow ignore data that's really far from the ball
+    - how does this account for the start of the filter, where we have to assume a starting position?
+        - or just if position is null take vision
+        - but if the ball ever gets lost, we can't recover since we will ignore all the "right" data
+- check if the last 3 vision clusters are linear with the ball's last position?
+- there's not necessarily enough detections to go with the densest cluster
+- maybe track n balls at a time, and update confidence based on linearity of new data with each ball position, and take on with highest confidence
+    - this way we hopefully can adjust to new balls appearing across the field
+    - we can't filter data in this case
+    - prefer the ball that we think is moving (linearly) since it's more likely the ball than the coincidently still noise
