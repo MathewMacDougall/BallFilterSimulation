@@ -27,15 +27,6 @@ class Point:
         else:
             return Point(self.x * l / self.length(), self.y * l / self.length())
 
-    def angle(self):
-        if self.length() == 0.0:
-            return 0
-
-        if self.y >= 0:
-            return math.acos(self.x / self.length())
-        else:
-            return 2 * math.pi + math.acos(self.x / self.length())
-
     def copy(self):
         return Point(self.x, self.y)
 
@@ -44,7 +35,3 @@ class Point:
 
     def __repr__(self):
         return "<{}, {}>".format(self.x, self.y)
-
-    @staticmethod
-    def from_angle(angle, length):
-        return Point(length * math.cos(angle), length * math.sin(angle))

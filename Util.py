@@ -4,9 +4,7 @@ import math
 # returns true if the given point is within a field of length length (x dimension)
 # and width width (y dimension) centered at (0, 0)
 def is_within_field(point, length, width):
-    maxx = length / 2
-    maxy = width / 2
-    return math.fabs(point.x) < maxx and math.fabs(point.y) < maxy
+    return math.fabs(point.x) < length / 2 and math.fabs(point.y) < width / 2
 
 # return the closest point to target
 def get_closest(target, points):
@@ -24,7 +22,7 @@ def get_closest(target, points):
 
 
 # check if mathew_particle_ball is within 8m/s of old_ball
-def is_within_range(old_ball, new_ball, timeDelta, MAX_BALL_SPEED):
+def is_valid_velocity(old_ball, new_ball, timeDelta, MAX_BALL_SPEED):
     dist = (new_ball.sub(old_ball)).length()
     vel = dist / timeDelta
     return vel < MAX_BALL_SPEED
@@ -50,9 +48,9 @@ def average_points(datapoints):
 
     sum = Point(0, 0)
     for p in datapoints:
-        sum.add(p)
+        sum = sum.add(p)
 
-    sum.norm(sum.length() / len(datapoints))
+    sum = sum.norm(sum.length() / len(datapoints))
     return sum
 
 

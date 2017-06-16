@@ -16,7 +16,7 @@ from Point import Point
 from Robot import Robot
 from ParticleFilter import ParticleFilter
 from MFilter import MFilter
-from MathewFilter import MathewFilter
+from MathewParticleFilter import MathewParticleFilter
 
 # Constants for the field/simulation
 FIELD_LENGTH = 9
@@ -86,7 +86,7 @@ path_to_logfiles = "logfiles/"
 
 # The generated videos will be save with the same name as the logfile
 # LOGFILE = "straight_line_no_bots.tsv"
-# LOGFILE = "bounce_no_bots.tsv"
+LOGFILE = "bounce_no_bots.tsv"
 # LOGFILE = "curve_no_bots.tsv"
 # LOGFILE = "germany_GAME_2.tsv"
 # LOGFILE = "germany_GAME_1.tsv"
@@ -94,12 +94,12 @@ path_to_logfiles = "logfiles/"
 # LOGFILE = "germany_small_chip_test_19.tsv"
 # LOGFILE = "germany_small_chip_test_19.tsv"
 # LOGFILE = "bounce_no_bots_3_particle.tsv"
-LOGFILE = "bounce_no_bots_particle.tsv"
+# LOGFILE = "bounce_no_bots_particle.tsv"
 # LOGFILE = "bounce_no_bots_noisy_particle.tsv"
 # LOGFILE = "sitting_still_noisy_particle.tsv"
 # LOGFILE = "sitting_still_particle.tsv"
 
-FPS = 20
+FPS = 15
 
 # Choose what filter(s) to display
 USE_PARTICLE_FILTER = False
@@ -115,7 +115,7 @@ mathew_particle_ball = Ball(0, 0)
 
 pFilter = ParticleFilter(FIELD_LENGTH, FIELD_WIDTH)
 mathewCustomFilter = MFilter(FIELD_LENGTH, FIELD_WIDTH)
-mathewParticleFilter = MathewFilter(FIELD_LENGTH, FIELD_WIDTH)
+mathewParticleFilter = MathewParticleFilter(FIELD_LENGTH, FIELD_WIDTH)
 
 # The simulator
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -295,6 +295,8 @@ mathew_custom_velocity, = plt.plot([], [], 'c-', lw=0.5)
 mathew_particle_plot, = plt.plot([], [], 'mo', ms=3)
 mathew_particle_velocity, = plt.plot([], [], 'm-', lw=0.5)
 
+basepoints_scatter = plt.scatter([], [], marker='x', cmap='winter', s=15, c=[], vmin=0.0, vmax=1.0)
+
 # Friendly players
 friendly_1 = plt.Circle((-99, -99), radius=0.09, color="green")
 friendly_2 = plt.Circle((-99, -99), radius=0.09, color="green")
@@ -312,6 +314,7 @@ enemy_5 = plt.Circle((-99, -99), radius=0.09, color="red")
 enemy_6 = plt.Circle((-99, -99), radius=0.09, color="red")
 
 
+
 # Initializes the variables for the animation
 def init():
     ax.add_patch(field1)
@@ -325,6 +328,7 @@ def init():
 
     # all_balls_plot.set_data([], [])
     all_balls_scatter.set_offsets([])
+    basepoints_scatter.set_offsets([])
     old_filter_plot.set_data([], [])
     old_filter_velocity.set_data([], [])
     particle_ball_plot.set_data([], [])
@@ -352,8 +356,10 @@ def init():
            old_filter_plot, old_filter_velocity, \
            particle_ball_plot, particle_ball_velocity, \
            mathew_custom_plot, mathew_custom_velocity, \
-           mathew_particle_plot, mathew_particle_velocity,
+           mathew_particle_plot, mathew_particle_velocity,\
+            basepoints_scatter,
 
+basepoints_data = mathewParticleFilter.get_basepoints()
 
 def run(i):
     # update all_balls position in scatter plot
@@ -361,6 +367,14 @@ def run(i):
     for c in all_balls_data[i]:
         temp_all_ball_scatter_data.append((c.position().x, c.position().y))
     all_balls_scatter.set_offsets(temp_all_ball_scatter_data)
+
+    temp_basepoints_scatter_data = []
+    if i < len(basepoints_data):
+        print("drawing basepoints {}".format(basepoints_data[i]))
+        for w in basepoints_data[i]:
+            temp_basepoints_scatter_data.append((w.x, w.y))
+        basepoints_scatter.set_offsets(temp_basepoints_scatter_data)
+        basepoints_scatter.set_array(np.array([1.0 for r in basepoints_data[i]]))
 
     # color the vision balls based on their confidence values
     all_balls_scatter.set_array(np.array([c.confidence for c in all_balls_data[i]]))
@@ -419,7 +433,8 @@ def run(i):
            old_filter_plot, old_filter_velocity, \
            particle_ball_plot, particle_ball_velocity, \
            mathew_custom_plot, mathew_custom_velocity, \
-           mathew_particle_plot, mathew_particle_velocity,
+           mathew_particle_plot, mathew_particle_velocity,\
+           basepoints_scatter,
 
 
 

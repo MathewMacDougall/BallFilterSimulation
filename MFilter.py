@@ -85,7 +85,7 @@ class MFilter:
                     # point = Util.average_points(datapoints)
                     point = datapoints[len(datapoints) - 1]
 
-                if Util.is_within_range(self.last_ball_, point, timeDelta, MAX_BALL_SPEED):
+                if Util.is_valid_velocity(self.last_ball_, point, timeDelta, MAX_BALL_SPEED):
                     self.ball_ = point
                     self.update_confidence(BALL_CONFIDENCE_INCREMENT)
                 else:
