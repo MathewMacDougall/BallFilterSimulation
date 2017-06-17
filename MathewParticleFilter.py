@@ -10,15 +10,15 @@ MAX_BALL_SPEED = 8.5
 MIN_CONFIDENCE = 0.9
 
 # Particle filter constants
-NUM_PARTICLES = 200
-NUM_CONDENSATIONS = 5
-MAX_SPREAD = 0.01   # the variance of randomly generated gaussian points
+NUM_PARTICLES = 300
+NUM_CONDENSATIONS = 7
+MAX_SPREAD = 0.05   # the variance of randomly generated gaussian points
 TOP_PERCENTAGE_OF_POINTS = 0.1   # the percentage of points to keep each condensation
 
 # TODO: weight vision detections within the 8ms range higher than those outsied? and have prediction weight in the middle?
 CLOSE_DETECTION_WEIGHT = 100  # weight of a ball detection that's within the 8m/s distance threshold
-FAR_DETECTION_WEIGHT = 50   # weight of a ball detection that's outside the 8m/s distance threshold
-PREVIOUS_BALL_WEIGHT = 10   # weight of the last known ball location
+FAR_DETECTION_WEIGHT = 80   # weight of a ball detection that's outside the 8m/s distance threshold
+PREVIOUS_BALL_WEIGHT = 1   # weight of the last known ball location
 PREDICTION_WEIGHT = 15  # weight of the ball's predicted location
 
 
@@ -87,8 +87,11 @@ class MathewParticleFilter:
 
             basepoints = [p[0] for p in best_particles]
 
+        # TODO: also check variance of basepoints? If it's too large there are probably 2 cluster so either average the one with
+        # higher confidence, or instead just take the single most confident point
         # self.ball = basepoints[len(basepoints) - 1]
         self.ball = Util.average_points(basepoints)
+        # print(Util.get_points_variance(basepoints))
 
         # print("ball at {}".format(self.ball))
         self.detections.clear() # clear detections for next tick
@@ -103,25 +106,32 @@ class MathewParticleFilter:
     # - proximity to the last ball's location (closer is better ish)
     # - proximity to the last ball's predicted location (closer is better)
     def evaluate_point(self, point, timeDelta):
+        ball_max_dist = MAX_BALL_SPEED * timeDelta
+
         detection_score = 0
         for d in self.detections:
             detection_dist = (d.sub(point)).length()
-            detection_score += CLOSE_DETECTION_WEIGHT * math.pow(math.e, -7 * detection_dist)
+            if self.ball is None or (d.sub(self.ball)).length() <= 1:
+                # the detection is resonably close to the old ball. Use full weight
+                detection_score += CLOSE_DETECTION_WEIGHT * math.pow(math.e, -1 * detection_dist)
+            else:
+                detection_score += FAR_DETECTION_WEIGHT * math.pow(math.e, -10 * detection_dist)
 
         previous_ball_score = 0
         if self.ball is not None:
             ball_dist = (point.sub(self.ball)).length()
-            ball_max_dist = MAX_BALL_SPEED * timeDelta
-            if ball_dist > ball_max_dist: # 0.3 is slightly more than the ball can travel in 1/30 of a second at 8m/s
+            if ball_dist > 1:
                 previous_ball_score -= PREVIOUS_BALL_WEIGHT
             else:
                 # this is a leanear score from PREVIOUS_BALL_WEIGHT at a dist of 0, to PREVIOUS_BALL_WEIGHT/2 at a dist of ball_max_dist
                 previous_ball_score += PREVIOUS_BALL_WEIGHT #PREVIOUS_BALL_WEIGHT - (PREVIOUS_BALL_WEIGHT / ball_max_dist / 2) * ball_dist
 
         prediction_score = 0
-        if self.prediction is not None:
+        if self.prediction is not None and self.ball is not None:
+            ball_dist = (point.sub(self.ball)).length()
             prediction_dist = (point.sub(self.prediction)).length()
-            prediction_score = PREDICTION_WEIGHT * math.pow(math.e, -2 * prediction_dist)
+            # prediction_score = PREDICTION_WEIGHT * math.pow(math.e, -2 * prediction_dist)
+            prediction_score += PREDICTION_WEIGHT - (PREDICTION_WEIGHT / 1) * ball_dist
 
         return detection_score + previous_ball_score + prediction_score
 
