@@ -99,7 +99,7 @@ LOGFILE = "bounce_no_bots.tsv"
 # LOGFILE = "sitting_still_noisy_particle.tsv"
 # LOGFILE = "sitting_still_particle.tsv"
 
-FPS = 15
+FPS = 25
 
 # Choose what filter(s) to display
 USE_PARTICLE_FILTER = False
@@ -181,7 +181,7 @@ with open(path_to_logfiles + LOGFILE, 'r') as tsv:
                 mathew_custom_ball_data.append(mathew_custom_ball.copy())
 
             if USE_MATHEW_PARTICLE_FILTER:
-                mathewParticleFilter.update()
+                mathewParticleFilter.update(time_delta, mathew_particle_ball) # passing the ball as a param to pretend the filter has access to it like in the real ai
                 mathew_particle_ball.update_position(mathewParticleFilter.getEstimate(), best_time)
                 mathew_particle_ball_data.append(mathew_particle_ball.copy())
 
@@ -285,7 +285,7 @@ field4 = plt.Rectangle((0, -FIELD_WIDTH / 2), 0, FIELD_WIDTH, lw=2, fill=False, 
 field5 = plt.Circle((0, 0), radius=CENTER_CIRCLE_RADIUS, lw=2, fill=False, ec='black')
 
 ball_cmap = custom_div_cmap()
-all_balls_scatter = plt.scatter([], [], marker='d', cmap=ball_cmap, c=[], s=7, vmin=0.0, vmax=1.0)
+all_balls_scatter = plt.scatter([], [], marker='d', cmap=ball_cmap, c=[], s=25, vmin=0.0, vmax=1.0)
 old_filter_plot, = plt.plot([], [], 'ko', ms=2, alpha=0.6)
 old_filter_velocity, = plt.plot([], [], 'k-', lw=0.4, alpha=0.6)
 particle_ball_plot, = plt.plot([], [], 'yo', ms=3)
@@ -312,7 +312,6 @@ enemy_3 = plt.Circle((-99, -99), radius=0.09, color="red")
 enemy_4 = plt.Circle((-99, -99), radius=0.09, color="red")
 enemy_5 = plt.Circle((-99, -99), radius=0.09, color="red")
 enemy_6 = plt.Circle((-99, -99), radius=0.09, color="red")
-
 
 
 # Initializes the variables for the animation
@@ -435,10 +434,6 @@ def run(i):
            mathew_custom_plot, mathew_custom_velocity, \
            mathew_particle_plot, mathew_particle_velocity,\
            basepoints_scatter,
-
-
-
-
 
 # create animation
 ani = animation.FuncAnimation(fig, run, blit=True, interval=1,

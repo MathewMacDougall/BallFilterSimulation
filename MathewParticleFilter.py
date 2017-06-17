@@ -1,23 +1,25 @@
 from Point import Point
 from BallData import BallData
+from Ball import Ball
 import math
 from operator import itemgetter
 import Util
 import numpy as np
 
-
-MAX_BALL_SPEED = 8
+MAX_BALL_SPEED = 8.5
 MIN_CONFIDENCE = 0.9
 
 # Particle filter constants
-NUM_PARTICLES = 300
-NUM_CONDENSATIONS = 7
-MAX_SPREAD = 0.05   # the variance of randomly generated gaussian points
-TOP_PERCENTAGE_OF_POINTS = 0.05 # the percentage of points to keep each condensation
+NUM_PARTICLES = 200
+NUM_CONDENSATIONS = 5
+MAX_SPREAD = 0.01   # the variance of randomly generated gaussian points
+TOP_PERCENTAGE_OF_POINTS = 0.1   # the percentage of points to keep each condensation
 
-DETECTION_WEIGHT = 100  # weight of a ball detection
-PREVIOUS_BALL_WEIGHT = 5   # weight of the last known ball location
-PREDICTION_WEIGHT = 70  # weight of the ball's predicted location
+# TODO: weight vision detections within the 8ms range higher than those outsied? and have prediction weight in the middle?
+CLOSE_DETECTION_WEIGHT = 100  # weight of a ball detection that's within the 8m/s distance threshold
+FAR_DETECTION_WEIGHT = 50   # weight of a ball detection that's outside the 8m/s distance threshold
+PREVIOUS_BALL_WEIGHT = 10   # weight of the last known ball location
+PREDICTION_WEIGHT = 15  # weight of the ball's predicted location
 
 
 class MathewParticleFilter:
@@ -29,7 +31,7 @@ class MathewParticleFilter:
         self.detections = []    # the vision detections each tick
 
         self.ball = None
-        self.prediction = Point(0, 0)
+        self.prediction = None
 
         self.basepoints_data = []
 
@@ -62,11 +64,14 @@ class MathewParticleFilter:
                 y = np.random.random() * self.width - self.width / 2
                 self.particles[i][0] = Point(x, y)
 
-    def update(self):
+    def update(self, timeDelta, ball_=None):
+        self.prediction = ball_.position(timeDelta)
+
         # set all initial basepoints
         basepoints = self.detections
         if self.ball is not None:
-            basepoints.append(self.ball)
+            # basepoints.append(self.ball)
+            basepoints.append(self.prediction)
 
         # Do the particle generation and condensation loop
         # - generate particles around the given basepoints
@@ -74,7 +79,7 @@ class MathewParticleFilter:
         # - keep the top percentage of particles and use them as the new basepoints for next loop
         for i in range(NUM_CONDENSATIONS):
             self.generate_particles(basepoints)
-            self.update_particle_confidences()
+            self.update_particle_confidences(timeDelta)
 
             num_particles_to_keep = int(TOP_PERCENTAGE_OF_POINTS * NUM_PARTICLES)
             tmp_list = sorted(self.particles.copy(), key=itemgetter(1)) # sort by confidence
@@ -88,30 +93,37 @@ class MathewParticleFilter:
         # print("ball at {}".format(self.ball))
         self.detections.clear() # clear detections for next tick
 
-    def update_particle_confidences(self):
+    def update_particle_confidences(self, timeDelta):
         for i in range(NUM_PARTICLES):
             particle = self.particles[i][0]
-            self.particles[i][1] = self.evaluate_point(particle)
+            self.particles[i][1] = self.evaluate_point(particle, timeDelta)
 
     # scores the point based on:
     # - proximity to a vision detection (close is better)
     # - proximity to the last ball's location (closer is better ish)
     # - proximity to the last ball's predicted location (closer is better)
-    def evaluate_point(self, point):
+    def evaluate_point(self, point, timeDelta):
         detection_score = 0
         for d in self.detections:
             detection_dist = (d.sub(point)).length()
-            detection_score += DETECTION_WEIGHT * math.pow(math.e, -10*detection_dist)
+            detection_score += CLOSE_DETECTION_WEIGHT * math.pow(math.e, -7 * detection_dist)
 
         previous_ball_score = 0
         if self.ball is not None:
             ball_dist = (point.sub(self.ball)).length()
-            if ball_dist > 0.3: # 0.3 is slightly more than the ball can travel in 1/30 of a second at 8m/s
-                previous_ball_score += 0
+            ball_max_dist = MAX_BALL_SPEED * timeDelta
+            if ball_dist > ball_max_dist: # 0.3 is slightly more than the ball can travel in 1/30 of a second at 8m/s
+                previous_ball_score -= PREVIOUS_BALL_WEIGHT
             else:
-                previous_ball_score += PREVIOUS_BALL_WEIGHT - (PREVIOUS_BALL_WEIGHT / 0.3) * ball_dist
+                # this is a leanear score from PREVIOUS_BALL_WEIGHT at a dist of 0, to PREVIOUS_BALL_WEIGHT/2 at a dist of ball_max_dist
+                previous_ball_score += PREVIOUS_BALL_WEIGHT #PREVIOUS_BALL_WEIGHT - (PREVIOUS_BALL_WEIGHT / ball_max_dist / 2) * ball_dist
 
-        return detection_score + previous_ball_score
+        prediction_score = 0
+        if self.prediction is not None:
+            prediction_dist = (point.sub(self.prediction)).length()
+            prediction_score = PREDICTION_WEIGHT * math.pow(math.e, -2 * prediction_dist)
+
+        return detection_score + previous_ball_score + prediction_score
 
     def get_basepoints(self):
         return self.basepoints_data

@@ -8,7 +8,10 @@ class Ball:
         self.lock_time = lock_time # the last timestamp the ball was seen/updated
 
     def position(self, timeDelta = 0.0):
-        return self.pos.add(self.vel.norm(self.vel.length() * timeDelta))
+        if self.vel.length() < 0.001:
+            return self.pos
+        else:
+            return self.pos.add(self.vel.norm(self.vel.length() * timeDelta))
 
     def velocity(self):
         return self.vel
