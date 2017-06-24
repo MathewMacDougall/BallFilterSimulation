@@ -3,8 +3,8 @@ import math
 
 # returns true if the given point is within a field of length length (x dimension)
 # and width width (y dimension) centered at (0, 0)
-def is_within_field(point, length, width):
-    return math.fabs(point.x) < length / 2 and math.fabs(point.y) < width / 2
+def is_within_field(point, length, width, tolerance=0):
+    return math.fabs(point.x) < length / 2 + tolerance and math.fabs(point.y) < width / 2 + tolerance
 
 # return the closest point to target
 def get_closest(target, points):

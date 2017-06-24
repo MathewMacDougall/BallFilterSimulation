@@ -48,7 +48,7 @@ class MathewParticleFilter:
 
     # populates the list of particles. If no base points are given distributes particles
     # randomly aroun the field otherwise puts them around the base points
-    # TODO: MAX_SPREAD decreases with number of condensations???
+    # TODO: MAX_SPREAD decreases with number of condensations??? - hard to do this in C++
     def generate_particles(self, base_points):
         if len(base_points) > 0:
             # generate around points given in base_points
@@ -73,6 +73,13 @@ class MathewParticleFilter:
             # basepoints.append(self.ball)
             basepoints.append(self.prediction)
 
+        # remove basepoints that are too far from the field. The ball can't be there
+        tmp_bp = []
+        for b in basepoints:
+            if Util.is_within_field(b, self.length, self.width, 0.10):
+                tmp_bp.append(b)
+        basepoints = tmp_bp
+
         # Do the particle generation and condensation loop
         # - generate particles around the given basepoints
         # - update the confidences of each new particle
@@ -90,7 +97,8 @@ class MathewParticleFilter:
         # TODO: also check variance of basepoints? If it's too large there are probably 2 cluster so either average the one with
         # higher confidence, or instead just take the single most confident point
         # self.ball = basepoints[len(basepoints) - 1]
-        self.ball = Util.average_points(basepoints)
+        if len(self.detections) > 0:
+            self.ball = Util.average_points(basepoints)
         # print(Util.get_points_variance(basepoints))
 
         # print("ball at {}".format(self.ball))
@@ -120,11 +128,11 @@ class MathewParticleFilter:
         previous_ball_score = 0
         if self.ball is not None:
             ball_dist = (point.sub(self.ball)).length()
-            if ball_dist > 1:
-                previous_ball_score -= PREVIOUS_BALL_WEIGHT
-            else:
-                # this is a leanear score from PREVIOUS_BALL_WEIGHT at a dist of 0, to PREVIOUS_BALL_WEIGHT/2 at a dist of ball_max_dist
-                previous_ball_score += PREVIOUS_BALL_WEIGHT #PREVIOUS_BALL_WEIGHT - (PREVIOUS_BALL_WEIGHT / ball_max_dist / 2) * ball_dist
+            if ball_dist <= 1:
+                previous_ball_score += PREVIOUS_BALL_WEIGHT
+            # else:
+            #     # this is a leanear score from PREVIOUS_BALL_WEIGHT at a dist of 0, to PREVIOUS_BALL_WEIGHT/2 at a dist of ball_max_dist
+            #     previous_ball_score += PREVIOUS_BALL_WEIGHT #PREVIOUS_BALL_WEIGHT - (PREVIOUS_BALL_WEIGHT / ball_max_dist / 2) * ball_dist
 
         prediction_score = 0
         if self.prediction is not None and self.ball is not None:

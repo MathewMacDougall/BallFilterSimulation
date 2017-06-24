@@ -86,11 +86,11 @@ path_to_logfiles = "logfiles/"
 
 # The generated videos will be save with the same name as the logfile
 # LOGFILE = "straight_line_no_bots.tsv"
-# LOGFILE = "bounce_no_bots.tsv"
+LOGFILE = "bounce_no_bots.tsv"
 # LOGFILE = "curve_no_bots.tsv"
 # LOGFILE = "germany_GAME_2.tsv"
 # LOGFILE = "germany_GAME_1.tsv"
-LOGFILE = "germany_GAME_3.tsv"
+# LOGFILE = "germany_GAME_3.tsv"
 # LOGFILE = "germany_small_chip_test_19.tsv"
 # LOGFILE = "germany_small_chip_test_19.tsv"
 # LOGFILE = "bounce_no_bots_3_particle.tsv"
